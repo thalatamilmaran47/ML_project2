@@ -1,0 +1,127 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNge3wlzKMCJWngSZV8Gbrm",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/thalatamilmaran47/ML_project2/blob/main/movie%20Rec\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 47,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "tO7tWvPWhQ-R",
+        "outputId": "8bd0983b-0808-43cf-f0ef-d75593335f68"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "User-Item Matrix:\n",
+            " movie_id  101  102  103  104  105\n",
+            "user_id                          \n",
+            "1         5.0  4.0  3.0  0.0  0.0\n",
+            "2         5.0  0.0  0.0  2.0  0.0\n",
+            "3         0.0  4.0  5.0  0.0  1.0\n",
+            "4         4.0  0.0  3.0  0.0  2.0\n",
+            "\n",
+            "User Similarity Matrix:\n",
+            " user_id         1         2         3         4\n",
+            "user_id                                        \n",
+            "1        1.000000  0.656532  0.676475  0.761577\n",
+            "2        0.656532  1.000000  0.000000  0.689655\n",
+            "3        0.676475  0.000000  1.000000  0.487108\n",
+            "4        0.761577  0.689655  0.487108  1.000000\n",
+            "\n",
+            "Recommendations for User 1:\n",
+            " movie_id\n",
+            "105    1.5\n",
+            "104    0.0\n",
+            "dtype: float64\n"
+          ]
+        }
+      ],
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "from sklearn.metrics.pairwise import cosine_similarity\n",
+        "from sklearn.neighbors import NearestNeighbors\n",
+        "\n",
+        "# Step 1: Create a dummy dataset (user_id, movie_id, rating)\n",
+        "data = {\n",
+        "    'user_id': [1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4],\n",
+        "    'movie_id': [101, 102, 103, 101, 104, 102, 103, 105, 101, 103, 105],\n",
+        "    'rating': [5, 4, 3, 5, 2, 4, 5, 1, 4, 3, 2]\n",
+        "}\n",
+        "df = pd.DataFrame(data)\n",
+        "\n",
+        "# Step 2: Create user-item matrix (rows: users, columns: movies, values: ratings)\n",
+        "user_item_matrix = df.pivot_table(index='user_id', columns='movie_id', values='rating').fillna(0)\n",
+        "print(\"User-Item Matrix:\\n\", user_item_matrix)\n",
+        "\n",
+        "# Step 3: Compute cosine similarity between users\n",
+        "user_similarity = cosine_similarity(user_item_matrix)\n",
+        "user_similarity_df = pd.DataFrame(user_similarity, index=user_item_matrix.index, columns=user_item_matrix.index)\n",
+        "print(\"\\nUser Similarity Matrix:\\n\", user_similarity_df)\n",
+        "\n",
+        "# Step 4: Use KNN to find similar users (K=2 for simplicity)\n",
+        "knn = NearestNeighbors(metric='cosine', algorithm='brute')\n",
+        "knn.fit(user_item_matrix)\n",
+        "\n",
+        "# Function to recommend movies for a user\n",
+        "def recommend_movies(user_id, n_recommendations=2):\n",
+        "    # Find K nearest neighbors\n",
+        "    distances, indices = knn.kneighbors(user_item_matrix.loc[user_id].values.reshape(1, -1), n_neighbors=3)  # Includes self, so +1\n",
+        "    similar_users = user_item_matrix.index[indices.flatten()][1:]  # Exclude self\n",
+        "\n",
+        "    # Get ratings from similar users, average them for unseen movies\n",
+        "    similar_ratings = user_item_matrix.loc[similar_users]\n",
+        "    predictions = similar_ratings.mean(axis=0)\n",
+        "\n",
+        "    # Filter out movies the user has already rated\n",
+        "    user_rated = user_item_matrix.loc[user_id][user_item_matrix.loc[user_id] > 0].index\n",
+        "    recommendations = predictions.drop(user_rated).sort_values(ascending=False).head(n_recommendations)\n",
+        "\n",
+        "    return recommendations\n",
+        "\n",
+        "# Example: Recommend for user 1\n",
+        "print(\"\\nRecommendations for User 1:\\n\", recommend_movies(1))"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "1cacd89d"
+      },
+      "source": [
+        "!pip install scikit-surprise"
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
