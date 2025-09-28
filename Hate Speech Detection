@@ -1,0 +1,41 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOIhxumtOv9JVZR1CiDnAhi",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/thalatamilmaran47/ML_project2/blob/main/Hate%20Speech%20Detection\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 40,
+      "metadata": {
+        "id": "tO7tWvPWhQ-R"
+      },
+      "outputs": [],
+      "source": [
+        "# Install required packages: # pip install transformers tensorflow scikit-learn pandas import pandas as pd import tensorflow as tf from sklearn.model_selection import train_test_split from transformers import AutoTokenizer, TFAutoModelForSequenceClassification # 1. Load dataset (CSV must have 'text' and 'label' columns) df = pd.read_csv(\"hate_dataset.csv\") train_texts, val_texts, train_labels, val_labels = train_test_split( df[\"text\"], df[\"label\"], test_size=0.2, random_state=42 ) # 2. Tokenizer tokenizer = AutoTokenizer.from_pretrained(\"bert-base-uncased\") train_enc = tokenizer(list(train_texts), truncation=True, padding=True, return_tensors=\"tf\") val_enc = tokenizer(list(val_texts), truncation=True, padding=True, return_tensors=\"tf\") # 3. Model model = TFAutoModelForSequenceClassification.from_pretrained(\"bert-base-uncased\", num_labels=2) model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=2e-5), loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=[\"accuracy\"]) # 4. Train history = model.fit( x=dict(train_enc), y=train_labels, validation_data=(dict(val_enc), val_labels), epochs=2, batch_size=16 ) # 5. Save model model.save_pretrained(\"./saved_model\") tokenizer.save_pretrained(\"./saved_model\") # 6. Test prediction sample_texts = [\"I love this!\", \"This group should be destroyed.\"] inputs = tokenizer(sample_texts, return_tensors=\"tf\", padding=True, truncation=True) outputs = model(inputs).logits preds = tf.argmax(outputs, axis=1).numpy() print(\"Predictions:\", preds)"
+      ]
+    }
+  ]
+}
